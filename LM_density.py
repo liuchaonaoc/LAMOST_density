@@ -63,25 +63,23 @@ def readDR3():
     
     return D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3
 
-def getHaloRGB(D,Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, ind_haloRGB): 
+def getPop(D,Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, ind_pop): 
     # halo RGB for XU et al.
     
-    D_hRGB = D[ind_haloRGB]
-    Dlow_hRGB = Dlow[ind_haloRGB]
-    Dup_hRGB = Dup[ind_haloRGB]
-    X_hRGB = X[ind_haloRGB]
-    Y_hRGB = Y[ind_haloRGB]
-    Z_hRGB = Z[ind_haloRGB]
-    R_hRGB = R[ind_haloRGB]
-    r_hRGB = r_gc[ind_haloRGB]
-    K_hRGB = K[ind_haloRGB]
-    JK_hRGB = JK[ind_haloRGB]
-    #glon_hRGB = dr3.glon[ind_haloRGB]
-    #glat_hRGB = dr3.glat[ind_haloRGB]
-    plateserial_hRGB = plateserial[ind_haloRGB]
+    D_0 = D[ind_pop]
+    Dlow_0 = Dlow[ind_pop]
+    Dup_0 = Dup[ind_pop]
+    X_0 = X[ind_pop]
+    Y_0 = Y[ind_pop]
+    Z_0 = Z[ind_pop]
+    R_0 = R[ind_pop]
+    r_0 = r_gc[ind_pop]
+    K_0 = K[ind_pop]
+    JK_0 = JK[ind_pop]
+    plateserial_0 = plateserial[ind_pop]
 
-    return D_hRGB, Dlow_hRGB, Dup_hRGB, X_hRGB, Y_hRGB, \
-        Z_hRGB, R_hRGB, r_hRGB, K_hRGB, JK_hRGB, plateserial_hRGB
+    return D_0, Dlow_0, Dup_0, X_0, Y_0, \
+        Z_0, R_0, r_0, K_0, JK_0, plateserial_0
         
 ### functions to calculate the los density profile and all density profiles
 # calculate stellar density along a line of sight
@@ -136,8 +134,26 @@ def nulall(S0,K,JK,D, Dlow,Dup,plateserial, Kgrid, JKgrid, dK, dJK, Dgrid):
             print i
     print 'Time=%(t).8f' % {'t':time.clock()-start}
     return nu_i
-    
 
+def save_file(dr3,ind,D,Dlow,Dup,Z,R,r,lnnu,filename):
+     ####
+    # save the nu value and test with RZ map
+    a = np.array([dr3.obsid[ind].reshape((len(D))),\
+                  dr3.ra[ind].reshape((len(D))),\
+                  dr3.dec[ind].reshape((len(D))),\
+                  dr3.teff[ind].reshape((len(D))),\
+                  dr3.logg[ind].reshape((len(D))),\
+                  dr3.feh[ind].reshape((len(D))),\
+                  dr3.rv[ind].reshape((len(D))),\
+                  dr3.M_K50[ind].reshape((len(D))),\
+                  dr3.M_K50[ind].reshape((len(D)))-dr3.M_K15[ind].reshape((len(D))),\
+                  dr3.M_K85[ind].reshape((len(D)))-dr3.M_K50[ind].reshape((len(D))),\
+                  dr3.AK_RJCE[ind].reshape((len(D))),\
+                  dr3.Kmag_2mass[ind].reshape((len(D))),\
+                  D,Dlow, Dup, Z, R, r,lnnu]).T
+    #print a,np.shape(a)
+    np.savetxt(filename,a,fmt='%d %.5f %+.5f %.0f %.2f %.2f %.0f %.2f %.2f %.2f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %.2f',\
+               delimiter='')
 def test_nu(R,Z,nu):
     Rgrid = np.arange(0,100.,2.)
     Zgrid = np.arange(0,100.,2.)
@@ -167,39 +183,4 @@ def test_nu(R,Z,nu):
     ax.plot((np.sqrt(Rmesh**2+Zmesh**2)),np.log(numesh),'k.')
     ax.set_xlim([0,75])
     ax.set_ylim([-20,-9])
-if __name__ == '__main__':
-    ## Read the selection function data file for all DR3 plates
-#    S0 = np.genfromtxt(
-#        'Selection_plates.csv',           # file name
-#        skip_header=0,          # lines to skip at the top
-#        skip_footer=0,          # lines to skip at the bottom
-#        delimiter=',',          # column delimiter
-#        dtype='float32',        # data type
-#        filling_values=0)       # fill missing values with 0
-#    plateid = S0[:,0]
-#    dK = 0.25
-#    dJK = 0.1
-#    Kgrid = np.arange(0,15+dK,dK)
-#    JKgrid = np.arange(-0.5,4+dJK,dJK)
-#    
-#    # read DR3 data
-#    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = readDR3()
-#    
-#    # halo RGB sample
-#    ind_hRGB = (D>0) & (dr3.M_K50<-3.5) & (dr3.feh<-1) & (dr3.RGB>0)
-#    D_hRGB, Dlow_hRGB, Dup_hRGB, X_hRGB, Y_hRGB, Z_hRGB, R_hRGB, \
-#        r_hRGB, K_hRGB, JK_hRGB, plateserial_hRGB = getHaloRGB(D,\
-#        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGB)
-#    
-#        # derive nu for haloRGB sample
-    dD=0.01
-    Dgrid = np.arange(0,200+dD,dD)
-    nu_hRGB = nulall(S0,K_hRGB,JK_hRGB,D_hRGB, Dlow_hRGB,Dup_hRGB,\
-                 plateserial_hRGB, Kgrid, JKgrid, dK, dJK, Dgrid)
     
-    # save the nu value and test with RZ map
-    a = np.array([dr3.obsid[ind_hRGB].reshape((len(D_hRGB))),\
-                  D_hRGB,JK_hRGB, K_hRGB,np.log(nu_hRGB)]).T
-    #print a,np.shape(a)
-    np.savetxt('hRGB_nu.csv',a,delimiter=",")
-    test_nu(R_hRGB, Z_hRGB, nu_hRGB)
