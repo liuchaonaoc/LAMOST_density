@@ -153,7 +153,7 @@ def save_file(dr3,ind,D,Dlow,Dup,Z,R,r,lnnu,filename):
                   D,Dlow, Dup, Z, R, r,lnnu]).T
     #print a,np.shape(a)
     np.savetxt(filename,a,fmt='%d %.5f %+.5f %.0f %.2f %.2f %.0f %.2f %.2f %.2f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %.2f',\
-               delimiter='')
+               delimiter='', header='obsid ra dec teff logg feh rv MK MKerr_low MKerr_up AK K dist disterr_low disterr_up Z R r_gc lnnu')
 def test_nu(R,Z,nu):
     Rgrid = np.arange(0,100.,2.)
     Zgrid = np.arange(0,100.,2.)
