@@ -36,8 +36,9 @@ def gal2cart(l,b,D,Rsun,zsun):
     return x,y,z
 
 
-def readDR3():
-    hdulist = fits.open('/Users/chaoliu/mw/lamost_regular/data/DR3/DR3_b1_indspv1_photo_dist_short2.fits')
+def readDR3(k):
+   # hdulist = fits.open('/Users/cliu/mw/lamost_regular/data/DR3/DR3_b1_indspv1_photo_dist_short2.fits')
+    hdulist = fits.open('/Users/cliu/mw/lamost_regular/data/DR3/DR3_KGiants_short.fits')
     dr3 = hdulist[1].data
     # XYZ
     R0=8000 #pc the distance from the Sun to the GC
@@ -45,8 +46,8 @@ def readDR3():
     D = dr3.distK50_RJCE/1000.0 #kpc
     Dlow = D-dr3.distK85_RJCE/1000.0 #kpc
     Dup = dr3.distK15_RJCE/1000.0-D #kpc
-    
-    X,Y,Z = gal2cart(dr3.glon,dr3.glat,dr3.distK50_RJCE,R0,Z0) #R0=8000
+    D = D*k
+    X,Y,Z = gal2cart(dr3.glon,dr3.glat,D*1000.0,R0,Z0) #R0=8000
     R = np.sqrt(X**2+Y**2)
     r_gc = np.sqrt(R**2+Z**2)
     # in kpc
@@ -141,10 +142,13 @@ def save_file(dr3,ind,D,Dlow,Dup,Z,R,r,lnnu,filename):
     a = np.array([dr3.obsid[ind].reshape((len(D))),\
                   dr3.ra[ind].reshape((len(D))),\
                   dr3.dec[ind].reshape((len(D))),\
+                  dr3.glon[ind].reshape((len(D))),\
+                  dr3.glat[ind].reshape((len(D))),\
                   dr3.teff[ind].reshape((len(D))),\
                   dr3.logg[ind].reshape((len(D))),\
                   dr3.feh[ind].reshape((len(D))),\
                   dr3.rv[ind].reshape((len(D))),\
+                  dr3.EW_Mgb[ind].reshape(len(D)),\
                   dr3.M_K50[ind].reshape((len(D))),\
                   dr3.M_K50[ind].reshape((len(D)))-dr3.M_K15[ind].reshape((len(D))),\
                   dr3.M_K85[ind].reshape((len(D)))-dr3.M_K50[ind].reshape((len(D))),\
@@ -152,35 +156,34 @@ def save_file(dr3,ind,D,Dlow,Dup,Z,R,r,lnnu,filename):
                   dr3.Kmag_2mass[ind].reshape((len(D))),\
                   D,Dlow, Dup, Z, R, r,lnnu]).T
     #print a,np.shape(a)
-    np.savetxt(filename,a,fmt='%d %.5f %+.5f %.0f %.2f %.2f %.0f %.2f %.2f %.2f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %.2f',\
-               delimiter='', header='obsid ra dec teff logg feh rv MK MKerr_low MKerr_up AK K dist disterr_low disterr_up Z R r_gc lnnu')
-def test_nu(R,Z,nu):
-    Rgrid = np.arange(0,100.,2.)
-    Zgrid = np.arange(0,100.,2.)
-    iR = np.array([np.int(i) for i in np.round((R-Rgrid[0])/2.)])
-    iZ = np.array([np.int(i) for i in np.round((np.abs(Z)-Zgrid[0])/2.)])
-    ind = (iR>=0) & (iR<len(Rgrid)) & (iZ>=0) & (iZ<len(Zgrid))
-    Rzmap = np.zeros((len(Rgrid),len(Zgrid)))
-    NRzmap = np.zeros((len(Rgrid),len(Zgrid)))
-    for i in range(len(R)):
-        if ind[i]>0 and ~np.isnan(nu[i]) and ~np.isinf(nu[i]) and nu[i]>0:
-            Rzmap[iR[i],iZ[i]] = Rzmap[iR[i],iZ[i]]+nu[i]
-            NRzmap[iR[i],iZ[i]] = NRzmap[iR[i],iZ[i]]+1
-    Rzmap = Rzmap / NRzmap    
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.imshow(np.log(Rzmap.T),vmin=-18,vmax=-9,interpolation='nearest',\
-              extent=[0,100,100,0])
-    ax.set_ylim([0,80])
-    ax.set_xlim([0,80])
+    np.savetxt(filename,a,fmt='%d %.5f %+.5f %.5f %+.5f %.0f %.2f %.2f %.0f %.5f %.2f %.2f %.2f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %.2f',\
+               delimiter='', header='obsid ra dec l b teff logg feh rv Mgb MK MKerr_low MKerr_up AK K dist disterr_low disterr_up Z R r_gc lnnu')
+
+
     
-    Rmesh,Zmesh = np.meshgrid(Rgrid,Zgrid)
-    Rmesh = Rmesh.reshape((len(Rgrid)*len(Zgrid),))
-    Zmesh = Zmesh.reshape((len(Rgrid)*len(Zgrid),))
-    numesh = Rzmap.reshape((len(Rgrid)*len(Zgrid),))
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot((np.sqrt(Rmesh**2+Zmesh**2)),np.log(numesh),'k.')
-    ax.set_xlim([0,75])
-    ax.set_ylim([-20,-9])
+
+def distS(ra1,dec1,ra2,dec2):
+    return np.sqrt((ra1-ra2)**2*np.cos(dec1*np.pi/180.)**2+(dec1-dec2)**2)*3600. #in arcsec
     
+def duplicateCompare(ra, dec, D, nu):
+    '''
+    Compare lnnu for duplicated  stars, this can give an assessment of the performance
+    of density determination
+    '''
+    meannu = np.zeros(np.shape(nu))
+    devnu = np.zeros(np.shape(nu))
+    meanD = np.zeros(np.shape(nu))
+    devD = np.zeros(np.shape(nu))
+    for i in range(len(ra)):
+        d = distS(ra[i],dec[i], ra, dec)
+        ind0 = (d<5) & (d>0)
+        if np.sum(ind0)>0:
+            meannu[i] = np.mean(nu[ind0])
+            meanD[i] = np.mean(D[ind0])
+            if np.sum(ind0)>1:
+                devnu[i] = np.std(nu[ind0]-nu[i])
+                devD[i] = np.std(D[ind0]-D[i])
+            else:
+                devnu[i] = np.abs(nu[ind0]-nu[i])/np.sqrt(2)
+                devD[i] = np.abs(D[ind0]-D[i])/np.sqrt(2)
+    return meannu, devnu, meanD, devD
