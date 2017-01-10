@@ -187,3 +187,16 @@ def duplicateCompare(ra, dec, D, nu):
                 devnu[i] = np.abs(nu[ind0]-nu[i])/np.sqrt(2)
                 devD[i] = np.abs(D[ind0]-D[i])/np.sqrt(2)
     return meannu, devnu, meanD, devD
+
+    
+def complete(D, MK, filename):
+    fig = plt.figure(figsize=(5,4))
+    ax = fig.add_subplot(111)
+    ax.plot(D,MK,'k.')
+    ax.set_xlim((0,100))
+    ax.set_ylim((-7,5))
+    plt.xlabel('Distance (kpc)',fontsize=14)
+    plt.ylabel(r'$M_K$ (mag)')
+    fig.show()
+    
+    fig.savefig(filename,bbox_inches='tight')
