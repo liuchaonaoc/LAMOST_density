@@ -176,16 +176,16 @@ def duplicateCompare(ra, dec, D, nu):
     devD = np.zeros(np.shape(nu))
     for i in range(len(ra)):
         d = distS(ra[i],dec[i], ra, dec)
-        ind0 = (d<5) & (d>0)
+        ind0 = (d<5)# & (d>0)
         if np.sum(ind0)>0:
             meannu[i] = np.mean(nu[ind0])
             meanD[i] = np.mean(D[ind0])
             if np.sum(ind0)>1:
-                devnu[i] = np.std(nu[ind0]-nu[i])
-                devD[i] = np.std(D[ind0]-D[i])
-            else:
-                devnu[i] = np.abs(nu[ind0]-nu[i])/np.sqrt(2)
-                devD[i] = np.abs(D[ind0]-D[i])/np.sqrt(2)
+                devnu[i] = np.std(nu[ind0]-meannu[i])#*np.sqrt(np.sum(ind0))
+                devD[i] = np.std(D[ind0]-meanD[i])#*np.sqrt(np.sum(ind0))
+            #else:
+            #    devnu[i] = np.abs(nu[ind0]-meannu[i])*np.sqrt(2)
+            #    devD[i] = np.abs(D[ind0]-meanD[i])*np.sqrt(2)
     return meannu, devnu, meanD, devD
 
     

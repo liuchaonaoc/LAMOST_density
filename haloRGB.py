@@ -30,6 +30,11 @@ def doublePower(x,n1,gamma1,gamma2,r0):
 
     return np.log(nu)
     
+    
+def singlePower(x,n1,gamma1):
+    nu1 = n1*x**(-gamma1)
+    return np.log(nu)
+    
 def draw_haloRZ(R,Z,nu):
     '''
     draw density map in R-Z plane to check if the lnnu makes sense
@@ -87,25 +92,52 @@ def draw_haloRZ(R,Z,nu):
     fig.show()
     fig.savefig('HaloRGBab_nuRZ.eps',bbox_inches='tight')
     #################### nu-r
-    rmesh = (np.sqrt(Rmesh**2+Zmesh**2))
-    ind = (numesh>0) & (~np.isinf(numesh)) & (~np.isnan(numesh)) & (rmesh<50) & (rmesh>10)
+    
     # fit with double power-law
-    numodel=doublePower(rmesh[ind],0.004,2.8,4.5,35.)
+#    numodel=doublePower(rmesh[ind],0.004,2.8,4.5,35.)
 #    fig0 = plt.figure()
 #    ax = fig0.add_subplot(111)
 #    ax.plot(np.log(rmesh[ind]),numodel,'ko')
 #    fig.show()
-    popt, pcov = curve_fit(doublePower,rmesh[ind], np.log(numesh[ind]), p0=[0.004,2.8,10,30.])
+    
     #print popt,np.sqrt(pcov.diagonal())
-    fig2 = plt.figure(figsize=(5,4))
-    ax = fig2.add_subplot(111)
+    fig2 = plt.figure(figsize=(5,6.5))
+    ax = fig2.add_subplot(211)
+    rmesh = (np.sqrt(Rmesh**2+Zmesh**2/1.0**2))
+    ind = (numesh>0) & (~np.isinf(numesh)) & (~np.isnan(numesh)) & (rmesh<50) & (rmesh>10)
+    popt, pcov = curve_fit(doublePower,rmesh[ind], np.log(numesh[ind]), p0=[0.004,2.8,5,30.])
+    
     ax.plot(rmesh,np.log(numesh),'.',color=[0.5,0.5,0.5])
-    ax.text(10.2,-18.5,r'$\nu\propto r^{%(g).1f\pm%(ge).1f}$, $r<%(r).1f\pm%(re).1f$' %\
+    ax.text(10.2,-18.5,r'$\nu\propto r^{-%(g).1f\pm%(ge).1f}$, $r<%(r).1f\pm%(re).1f$' %\
         {'g':popt[1],'ge':np.sqrt(pcov[1,1]),'r':popt[3],'re':np.sqrt(pcov[3,3])},\
         fontsize=14,color='r')
     ax.text(10.2,-19.5,r'$\nu\propto r^{-%(g).1f\pm%(ge).1f}$, $r>%(r).1f\pm%(re).1f$' %\
         {'g':popt[2],'ge':np.sqrt(pcov[2,2]),'r':popt[3],'re':np.sqrt(pcov[3,3])},\
         fontsize=14,color='b')
+    ax.text(25,-10,'q=1.0')
+    r0 = np.arange(0,60,1)
+    numodel=doublePower(r0,popt[0],popt[1],popt[2],popt[3])
+    ax.plot(r0,numodel,'r-',linewidth=2)
+    ax.set_xlim([10,90])
+    ax.set_ylim([-20,-9])
+    ax.set_xscale('log')
+    ax.set_xticks([10,20,30,40,50,60,70], minor=False)
+    ax.set_xticklabels(['10','20','30','40','50','60','70'])
+    #ax.set_xlabel(r'$r$ (kpc)',fontsize=14)
+    ax.set_ylabel(r'$\ln\nu$ (pc$^{-3}$)',fontsize=14)
+    ####
+    ax = fig2.add_subplot(212)
+    rmesh = (np.sqrt(Rmesh**2+Zmesh**2/0.75**2))
+    ind = (numesh>0) & (~np.isinf(numesh)) & (~np.isnan(numesh)) & (rmesh<50) & (rmesh>10)
+    popt, pcov = curve_fit(doublePower,rmesh[ind], np.log(numesh[ind]), p0=[0.004,3.,4.,30.])
+    ax.plot(rmesh,np.log(numesh),'.',color=[0.5,0.5,0.5])
+    ax.text(10.2,-18.5,r'$\nu\propto r^{-%(g).1f\pm%(ge).1f}$, $r<%(r).1f\pm%(re).1f$' %\
+        {'g':popt[1],'ge':np.sqrt(pcov[1,1]),'r':popt[3],'re':np.sqrt(pcov[3,3])},\
+        fontsize=14,color='r')
+    ax.text(10.2,-19.5,r'$\nu\propto r^{-%(g).1f\pm%(ge).1f}$, $r>%(r).1f\pm%(re).1f$' %\
+        {'g':popt[2],'ge':np.sqrt(pcov[2,2]),'r':popt[3],'re':np.sqrt(pcov[3,3])},\
+        fontsize=14,color='b')
+    ax.text(25,-10,'q=0.75')
     r0 = np.arange(0,60,1)
     numodel=doublePower(r0,popt[0],popt[1],popt[2],popt[3])
     ax.plot(r0,numodel,'r-',linewidth=2)
@@ -192,95 +224,96 @@ def gaussian(x,a,c):
     return a*np.exp(-(x-0)**2/(2*c**2))
    
 if __name__ == '__main__':
-    # Read the selection function data file for all DR3 plates
-    S0 = np.genfromtxt(
-        'Selection_plates.csv',           # file name
-        skip_header=0,          # lines to skip at the top
-        skip_footer=0,          # lines to skip at the bottom
-        delimiter=',',          # column delimiter
-        dtype='float32',        # data type
-        filling_values=0)       # fill missing values with 0
-    plateid = S0[:,0]
-    dK = 0.25
-    dJK = 0.1
-    Kgrid = np.arange(0,15+dK,dK)
-    JKgrid = np.arange(-0.5,4+dJK,dJK)
-    
-    ###########################################################################
-    ### halo 1
-    ### For Xu et al. 2017
-    ###########################################################################
-    # read DR3 data
-    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(1.)
-    # halo RGB sample
-    ind_hRGB = (D>0) & (dr3.M_K50<-3.5) & (dr3.feh<-1) &\
-        (K<=14.3)& (dr3.RGBhalo_xuyan==84)
-    
-    D_hRGB, Dlow_hRGB, Dup_hRGB, X_hRGB, Y_hRGB, Z_hRGB, R_hRGB, \
-        r_hRGB, K_hRGB, JK_hRGB, plateserial_hRGB = lm.getPop(D,\
-        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGB)
-    
-        # derive nu for haloRGB sample
-    dD=0.01
-    Dgrid = np.arange(0,200+dD,dD)
-    nu_hRGB = lm.nulall(S0,K_hRGB,JK_hRGB,D_hRGB, Dlow_hRGB,Dup_hRGB,\
-                 plateserial_hRGB, Kgrid, JKgrid, dK, dJK, Dgrid)
-    
-    lm.save_file(dr3,ind_hRGB,D_hRGB,Dlow_hRGB,Dup_hRGB,Z_hRGB,\
-             R_hRGB,r_hRGB,np.log(nu_hRGB),'LMDR3_haloRGB.dat')
-    lm.complete(D_hRGB, dr3.M_K50[ind_hRGB],'hRGB_complete.eps')
-    
-    ###########################################################################
-    ##### test D*0.8 for halo 1
-    ### For Xu et al. 2017
-    ###########################################################################
-    # read DR3 data
-    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(0.8)
-    
-    # halo RGB sample
-    ind_hRGBt = (D>0) & (dr3.M_K50<-3.5) & (dr3.feh<-1) & \
-        (K<=14.3) & (dr3.RGBhalo_xuyan==84)
-    D_hRGBt, Dlow_hRGBt, Dup_hRGBt, X_hRGBt, Y_hRGBt, Z_hRGBt, R_hRGBt, \
-        r_hRGBt, K_hRGBt, JK_hRGBt, plateserial_hRGBt = lm.getPop(D,\
-        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGBt)
-    
-    
-        # derive nu for haloRGB sample
-    dD=0.01
-    Dgrid = np.arange(0,200+dD,dD)
-    nu_hRGBt = lm.nulall(S0,K_hRGBt,JK_hRGBt,D_hRGBt, Dlow_hRGBt,Dup_hRGBt,\
-                 plateserial_hRGBt, Kgrid, JKgrid, dK, dJK, Dgrid)
-    
-    lm.save_file(dr3,ind_hRGBt,D_hRGBt,Dlow_hRGBt,Dup_hRGBt,Z_hRGBt,\
-             R_hRGBt,r_hRGBt,np.log(nu_hRGBt),'LMDR3_haloRGB_0.8D.dat')
-    
-    ##########################################################################
-    ## halo 2
-    ## For Liu et al. 2017
-    ##########################################################################
-    # read DR3 data
-    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(1.)
-    # halo RGB sample
-    ind_hRGB2 = (D>0) & (dr3.M_K50<-4) & (dr3.feh<-1) &\
-        (K<=14.3)#& (dr3.RGBhalo_xuyan==84)
-    
-    D_hRGB2, Dlow_hRGB2, Dup_hRGB2, X_hRGB2, Y_hRGB2, Z_hRGB2, R_hRGB2, \
-        r_hRGB2, K_hRGB2, JK_hRGB2, plateserial_hRGB2 = lm.getPop(D,\
-        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGB2)
-    
-        # derive nu for haloRGB sample
-    dD=0.01
-    Dgrid = np.arange(0,200+dD,dD)
-    nu_hRGB2 = lm.nulall(S0,K_hRGB2,JK_hRGB2,D_hRGB2, Dlow_hRGB2,Dup_hRGB2,\
-                 plateserial_hRGB2, Kgrid, JKgrid, dK, dJK, Dgrid)
-    
-    lm.save_file(dr3,ind_hRGB2,D_hRGB2,Dlow_hRGB2,Dup_hRGB2,Z_hRGB2,\
-             R_hRGB2,r_hRGB2,np.log(nu_hRGB2),'LMDR3_haloRGB2.dat')
-    print np.sum(ind_hRGB2)
+#    # Read the selection function data file for all DR3 plates
+#    S0 = np.genfromtxt(
+#        'Selection_plates.csv',           # file name
+#        skip_header=0,          # lines to skip at the top
+#        skip_footer=0,          # lines to skip at the bottom
+#        delimiter=',',          # column delimiter
+#        dtype='float32',        # data type
+#        filling_values=0)       # fill missing values with 0
+#    plateid = S0[:,0]
+#    dK = 0.25
+#    dJK = 0.1
+#    Kgrid = np.arange(0,15+dK,dK)
+#    JKgrid = np.arange(-0.5,4+dJK,dJK)
+#    
+#    ###########################################################################
+#    ### halo 1
+#    ### For Xu et al. 2017
+#    ###########################################################################
+#    # read DR3 data
+#    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(1.)
+#    # halo RGB sample
+#    ind_hRGB = (D>0) & (dr3.M_K50<-3.5) & (dr3.feh<-1) &\
+#        (K<=14.3)& (dr3.RGBhalo_xuyan==84)
+#    
+#    D_hRGB, Dlow_hRGB, Dup_hRGB, X_hRGB, Y_hRGB, Z_hRGB, R_hRGB, \
+#        r_hRGB, K_hRGB, JK_hRGB, plateserial_hRGB = lm.getPop(D,\
+#        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGB)
+#    
+#        # derive nu for haloRGB sample
+#    dD=0.01
+#    Dgrid = np.arange(0,200+dD,dD)
+#    nu_hRGB = lm.nulall(S0,K_hRGB,JK_hRGB,D_hRGB, Dlow_hRGB,Dup_hRGB,\
+#                 plateserial_hRGB, Kgrid, JKgrid, dK, dJK, Dgrid)
+#    
+#    lm.save_file(dr3,ind_hRGB,D_hRGB,Dlow_hRGB,Dup_hRGB,Z_hRGB,\
+#             R_hRGB,r_hRGB,np.log(nu_hRGB),'LMDR3_haloRGB.dat')
+#    lm.complete(D_hRGB, dr3.M_K50[ind_hRGB],'hRGB_complete.eps')
+#    fig2 = draw_haloRZ(R_hRGB, Z_hRGB, nu_hRGB)
+#    
+#    ###########################################################################
+#    ##### test D*0.8 for halo 1
+#    ### For Xu et al. 2017
+#    ###########################################################################
+#    # read DR3 data
+#    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(0.8)
+#    
+#    # halo RGB sample
+#    ind_hRGBt = (D>0) & (dr3.M_K50<-3.5) & (dr3.feh<-1) & \
+#        (K<=14.3) & (dr3.RGBhalo_xuyan==84)
+#    D_hRGBt, Dlow_hRGBt, Dup_hRGBt, X_hRGBt, Y_hRGBt, Z_hRGBt, R_hRGBt, \
+#        r_hRGBt, K_hRGBt, JK_hRGBt, plateserial_hRGBt = lm.getPop(D,\
+#        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGBt)
+#    
+#    
+#        # derive nu for haloRGB sample
+#    dD=0.01
+#    Dgrid = np.arange(0,200+dD,dD)
+#    nu_hRGBt = lm.nulall(S0,K_hRGBt,JK_hRGBt,D_hRGBt, Dlow_hRGBt,Dup_hRGBt,\
+#                 plateserial_hRGBt, Kgrid, JKgrid, dK, dJK, Dgrid)
+#    
+#    lm.save_file(dr3,ind_hRGBt,D_hRGBt,Dlow_hRGBt,Dup_hRGBt,Z_hRGBt,\
+#             R_hRGBt,r_hRGBt,np.log(nu_hRGBt),'LMDR3_haloRGB_0.8D.dat')
+#    
+#    ##########################################################################
+#    ## halo 2
+#    ## For Liu et al. 2017
+#    ##########################################################################
+#    # read DR3 data
+#    D, Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial, dr3 = lm.readDR3(1.)
+#    # halo RGB sample
+#    ind_hRGB2 = (D>0) & (dr3.M_K50<-4) & (dr3.feh<-1) &\
+#        (K<=14.3)#& (dr3.RGBhalo_xuyan==84)
+#    
+#    D_hRGB2, Dlow_hRGB2, Dup_hRGB2, X_hRGB2, Y_hRGB2, Z_hRGB2, R_hRGB2, \
+#        r_hRGB2, K_hRGB2, JK_hRGB2, plateserial_hRGB2 = lm.getPop(D,\
+#        Dlow, Dup, X, Y, Z, R, r_gc, K, JK, plateserial,ind_hRGB2)
+#    
+#        # derive nu for haloRGB sample
+#    dD=0.01
+#    Dgrid = np.arange(0,200+dD,dD)
+#    nu_hRGB2 = lm.nulall(S0,K_hRGB2,JK_hRGB2,D_hRGB2, Dlow_hRGB2,Dup_hRGB2,\
+#                 plateserial_hRGB2, Kgrid, JKgrid, dK, dJK, Dgrid)
+#    
+#    lm.save_file(dr3,ind_hRGB2,D_hRGB2,Dlow_hRGB2,Dup_hRGB2,Z_hRGB2,\
+#             R_hRGB2,r_hRGB2,np.log(nu_hRGB2),'LMDR3_haloRGB2.dat')
+#    print np.sum(ind_hRGB2)
     fig2 = draw_haloRZ(R_hRGB2, Z_hRGB2, nu_hRGB2)
 
-    
-    test_dupData(dr3,ind_hRGB2,nu_hRGB2, D)
-    
-    lm.complete(D_hRGB2, dr3.M_K50[ind_hRGB2],'hRGB2_complete.eps')
+#    
+#    test_dupData(dr3,ind_hRGB2,nu_hRGB2, D)
+#    
+#    lm.complete(D_hRGB2, dr3.M_K50[ind_hRGB2],'hRGB2_complete.eps')
 
