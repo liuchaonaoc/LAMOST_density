@@ -100,22 +100,56 @@ def nu_los(m,c,D,Dlow,Dup,Smap,Dgrid,mgrid,cgrid,dm,dc):
     S = Smap[im+ic*Nm]
     #print c,m
     nu = np.zeros(np.shape(Dgrid))
+    nu_sp = np.zeros(np.shape(Dgrid))
     for i in range(N):
         pp1 = np.exp(-(D[i]-Dgrid)**2/(2*Dlow[i]**2))
         pp2 = np.exp(-(D[i]-Dgrid)**2/(2*Dup[i]**2))
         pp = pp1
         pp[Dgrid>D[i]] = pp2[Dgrid>D[i]];
-        
-        nu0 = (pp/np.sum(pp)/(Dgrid**2))*S[i]*dm*dc
+        nu00= (pp/np.sum(pp)/(Dgrid**2))*dm*dc
+        nu0 = nu00*S[i]
         #print np.shape(pp),np.shape(S),np.shape(nu+nu0.reshape(np.shape(nu)))
         nu = nu+nu0#nu0.reshape(np.shape(nu));
-    return nu
+        nu_sp = nu_sp+nu00
+    return nu,nu_sp
                 
 # calculate stellar density for all lines of sight
 def nulall(S0,K,JK,D, Dlow,Dup,plateserial, Kgrid, JKgrid, dK, dJK, Dgrid):
     start = time.clock()
     nu_i = np.zeros(np.shape(D))
+    nusp_i = np.zeros(np.shape(D))
     Nplate = np.shape(S0)
+    for i in range(Nplate[0]):
+        #indP = plates.pid==i
+        pid = S0[i,0]
+        indStar = (plateserial==pid) & (D>0) & (D<Dgrid[-1])
+        #print np.sum(indStar)
+        if np.sum(indStar)>0:
+            nu1,nu1_sp = nu_los(K[indStar],JK[indStar],\
+                D[indStar],\
+                Dlow[indStar],Dup[indStar],\
+                S0[i,1:],Dgrid,Kgrid,JKgrid,dK,dJK)
+            indnu = (~np.isinf(nu1)) & (nu1>0) & (~np.isnan(nu1))
+            if np.sum(indnu)>2:
+                #iD=np.array([np.int(ii) for ii in np.round((D[indStar]-Dgrid[0])/0.01) ])
+                #nu_i[indStar]=nu1[iD]
+                f = interp1d(Dgrid[indnu],nu1[indnu],bounds_error=False,fill_value=0)
+                nu_i[indStar] = f(D[indStar])
+            indnu = (~np.isinf(nu1_sp)) & (nu1_sp>0) & (~np.isnan(nu1_sp))
+            if np.sum(indnu)>2:
+                #iD=np.array([np.int(ii) for ii in np.round((D[indStar]-Dgrid[0])/0.01) ])
+                #nu_i[indStar]=nu1[iD]
+                f = interp1d(Dgrid[indnu],nu1_sp[indnu],bounds_error=False,fill_value=0)
+                nusp_i[indStar] = f(D[indStar])
+            #print i
+    print 'Time=%(t).8f' % {'t':time.clock()-start}
+    return nu_i,nusp_i
+
+# calculate mean stellar density for all lines of sight
+def nulall_pltmean(S0,K,JK,D, Dlow,Dup,plateserial, Kgrid, JKgrid, dK, dJK, Dgrid):
+    start = time.clock()
+    Nplate = np.shape(S0)
+    nu_p = np.zeros((Nplate[0],len(Dgrid)))
     for i in range(Nplate[0]):
         #indP = plates.pid==i
         pid = S0[i,0]
@@ -126,16 +160,11 @@ def nulall(S0,K,JK,D, Dlow,Dup,plateserial, Kgrid, JKgrid, dK, dJK, Dgrid):
             D[indStar],\
             Dlow[indStar],Dup[indStar],\
             S0[i,1:],Dgrid,Kgrid,JKgrid,dK,dJK)
-            indnu = (~np.isinf(nu1)) & (nu1>0) & (~np.isnan(nu1))
-            if np.sum(indnu)>2:
-                #iD=np.array([np.int(ii) for ii in np.round((D[indStar]-Dgrid[0])/0.01) ])
-                #nu_i[indStar]=nu1[iD]
-                f = interp1d(Dgrid[indnu],nu1[indnu],bounds_error=False,fill_value=0)
-                nu_i[indStar] = f(D[indStar])
+            nu_p[i,:] = nu1
             print i
     print 'Time=%(t).8f' % {'t':time.clock()-start}
-    return nu_i
-
+    return nu_p
+ 
 def save_file(dr3,ind,D,Dlow,Dup,Z,R,r,lnnu,filename):
      ####
     # save the nu value and test with RZ map
