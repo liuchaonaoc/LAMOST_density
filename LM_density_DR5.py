@@ -108,8 +108,8 @@ class LM_density:
         K1 = self.K[indStar]
         JK1 = self.JK[indStar]
         D1 = self.D[indStar]
-        Dlow1 = self.D[indStar]
-        Dup1 = self.D[indStar]
+        Dlow1 = self.Dlow[indStar] #modified the bug 20240124
+        Dup1 = self.Dup[indStar] #modified the bug 20240124
         N = len(K1)
         im = np.array([np.int(i) for i in np.round((K1-self.Kgrid[0])/self.dK)])
         ic = np.array([np.int(i) for i in np.round((JK1-self.JKgrid[0])/self.dJK)])
